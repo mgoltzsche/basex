@@ -16,8 +16,6 @@ import org.basex.server.Log.LogType;
 import org.basex.util.*;
 import org.basex.util.options.*;
 import org.eclipse.jetty.server.*;
-import org.eclipse.jetty.server.nio.*;
-import org.eclipse.jetty.server.ssl.*;
 import org.eclipse.jetty.webapp.*;
 import org.eclipse.jetty.xml.*;
 
@@ -79,8 +77,8 @@ public final class BaseXHTTP extends Main {
 
     if(httpPort != 0) {
       for(final Connector conn : conns) {
-        if(conn instanceof SelectChannelConnector) {
-          conn.setPort(httpPort);
+        if(conn instanceof ServerConnector) {
+          ((ServerConnector) conn).setPort(httpPort);
           break;
         }
       }
@@ -93,19 +91,21 @@ public final class BaseXHTTP extends Main {
     if(stopped) {
       stop();
       for(final Connector conn : conns)
-        Util.outln(stopX, conn.getPort());
+        Util.outln(stopX, ((ServerConnector) conn).getPort());
       // temporary console windows: keep the message visible for a while
       Performance.sleep(1000);
       return;
     }
 
     // start web server in a new process
-    final Connector conn1 = conns[0];
+    final ServerConnector conn1 = ((ServerConnector) conns[0]);
     if(service) {
-      start(conn1.getPort(), conn1 instanceof SslSelectChannelConnector, args);
+      start(conn1.getDefaultProtocol(), conn1.getPort(), args);
 
       for(final Connector conn : conns) {
-        Util.outln(startX, conn.getPort());
+        if(conn instanceof AbstractNetworkConnector) {
+          Util.outln(startX, ((AbstractNetworkConnector) conn).getPort());
+        }
       }
       // temporary console windows: keep the message visible for a while
       Performance.sleep(1000);
@@ -135,7 +135,11 @@ public final class BaseXHTTP extends Main {
     if(ex != null) throw ex;
 
     // show start message
-    for(final Connector conn : conns) Util.outln(startX, conn.getPort());
+    for(final Connector conn : conns) {
+      if (conn instanceof AbstractNetworkConnector) {
+        Util.outln(startX, ((AbstractNetworkConnector) conn).getPort());
+      }
+    }
 
     // initialize web.xml settings, assign system properties and run database server.
     // the call of this function may already have been triggered during the start of jetty
@@ -151,12 +155,16 @@ public final class BaseXHTTP extends Main {
       @Override
       public void run() {
         for(final Connector conn : conns) {
-          Util.outln(stopX, conn.getPort());
+          if (conn instanceof AbstractNetworkConnector) {
+            Util.outln(stopX, ((AbstractNetworkConnector) conn).getPort());
+          }
         }
         final Log l = context.log;
         if(l != null) {
           for(final Connector conn : conns) {
-            l.writeServer(LogType.OK, Util.info(stopX, conn.getPort()));
+            if (conn instanceof AbstractNetworkConnector) {
+              l.writeServer(LogType.OK, Util.info(stopX, ((AbstractNetworkConnector) conn).getPort()));
+            }
           }
         }
         context.close();
@@ -165,7 +173,9 @@ public final class BaseXHTTP extends Main {
 
     // log server start at very end (logging flag could have been updated by web.xml)
     for(final Connector conn : conns) {
-      context.log.writeServer(LogType.OK, Util.info(startX, conn.getPort()));
+      if (conn instanceof AbstractNetworkConnector) {
+        context.log.writeServer(LogType.OK, Util.info(startX, ((AbstractNetworkConnector) conn).getPort()));
+      }
     }
   }
 
@@ -325,18 +335,18 @@ public final class BaseXHTTP extends Main {
 
   /**
    * Starts the HTTP server in a separate process.
+   * @param protocol protocol
    * @param port server port
-   * @param ssl encryption via HTTPS
    * @param args command-line arguments
    * @throws BaseXException database exception
    */
-  private static void start(final int port, final boolean ssl, final String... args)
+  private static void start(final String protocol, final int port, final String... args)
       throws BaseXException {
 
     Util.start(BaseXHTTP.class, args);
     // try to connect to the new server instance
     for(int c = 1; c < 10; ++c) {
-      if(ping(S_LOCALHOST, port, ssl)) return;
+      if(ping(protocol, S_LOCALHOST, port)) return;
       Performance.sleep(c * 100L);
     }
     throw new BaseXException(CONNECTION_ERROR_X, port);
@@ -372,15 +382,15 @@ public final class BaseXHTTP extends Main {
 
   /**
    * Checks if a server is running.
+   * @param protocol protocol (http|https)
    * @param host host
    * @param port server port
-   * @param ssl encryption via HTTPS
    * @return boolean success
    */
-  private static boolean ping(final String host, final int port, final boolean ssl) {
+  private static boolean ping(final String protocol, final String host, final int port) {
     try {
       // create connection
-      new IOUrl((ssl ? "https://" : "http://") + host + ':' + port).connection().getInputStream();
+      new IOUrl(protocol + "://" + host + ':' + port).connection().getInputStream();
       return true;
     } catch(final FileNotFoundException | SSLHandshakeException ex) {
       // if page is not found, server is running

@@ -6,12 +6,13 @@
        in the .basex or pom.xml configuration file.  -->
   <Call name="addConnector">
     <Arg>
-      <New class="org.eclipse.jetty.server.nio.SelectChannelConnector">
+      <New class="org.eclipse.jetty.server.ServerConnector">
+      	<Arg name="server"><Ref refid="Server" /></Arg>
         <Set name="host">0.0.0.0</Set>
         <Set name="port">8984</Set>
-        <Set name="maxIdleTime">60000</Set>
+        <Set name="idleTimeout">60000</Set>
         <Set name="reuseAddress">true</Set>
-        <Set name="Acceptors">2</Set>
+        <Set name="acceptQueueSize">2</Set>
         <!-- Support for SSL connections .
         <Set name="confidentialPort">8986</Set>
         -->

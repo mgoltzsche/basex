@@ -18,7 +18,7 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     <project.lib.directory>lib</project.lib.directory>
-    <jettyVersion>8.1.17.v20150415</jettyVersion>
+    <jettyVersion>9.3.4.RC0</jettyVersion>
   </properties>
 
   <dependencyManagement>
@@ -486,7 +486,7 @@
         </plugin>
 
         <plugin>
-          <groupId>org.mortbay.jetty</groupId>
+          <groupId>org.eclipse.jetty</groupId>
           <artifactId>jetty-maven-plugin</artifactId>
           <version>${jettyVersion}</version>
         </plugin>

@@ -84,7 +84,7 @@
         <artifactId>maven-source-plugin</artifactId>
       </plugin>
       <plugin>
-        <groupId>org.mortbay.jetty</groupId>
+        <groupId>org.eclipse.jetty</groupId>
         <artifactId>jetty-maven-plugin</artifactId>
         <configuration>
           <jettyXml>${basedir}/src/main/webapp/WEB-INF/jetty.xml</jettyXml>
